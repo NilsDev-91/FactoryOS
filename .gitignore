@@ -33,7 +33,8 @@ ENV/
 .idea/
 
 # Database
-*.db
+# factory.db is included as requested
+!factory.db
 *.sqlite3
 
 # OS
