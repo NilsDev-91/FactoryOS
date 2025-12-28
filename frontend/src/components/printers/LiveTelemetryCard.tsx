@@ -1,62 +1,45 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React from 'react';
 import { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cnUtils(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
 
 interface LiveTelemetryCardProps {
     label: string;
-    value: number | string;
+    value: string | number | undefined;
     unit: string;
     icon: LucideIcon;
-    color?: string;
+    color: 'orange' | 'blue' | 'emerald' | 'cyan' | 'purple';
 }
 
-const LiveTelemetryCard: React.FC<LiveTelemetryCardProps> = ({
-    label,
-    value,
-    unit,
-    icon: Icon,
-    color = "blue"
-}) => {
-    const [isUpdating, setIsUpdating] = useState(false);
-    const prevValueRef = useRef<number | string>(value);
+export function LiveTelemetryCard({ label, value, unit, icon: Icon, color }: LiveTelemetryCardProps) {
 
-    useEffect(() => {
-        if (prevValueRef.current !== value) {
-            setIsUpdating(true);
-            const timer = setTimeout(() => setIsUpdating(false), 1000);
-            prevValueRef.current = value;
-            return () => clearTimeout(timer);
-        }
-    }, [value]);
-
-    const colors = {
-        orange: "text-orange-400 border-orange-500/20 ring-orange-500/50",
-        blue: "text-blue-400 border-blue-500/20 ring-blue-500/50",
-        emerald: "text-emerald-400 border-emerald-500/20 ring-emerald-500/50",
-        cyan: "text-cyan-400 border-cyan-500/20 ring-cyan-500/50",
+    const colorStyles = {
+        orange: "text-orange-500 bg-orange-500/10 border-orange-500/20",
+        blue: "text-blue-500 bg-blue-500/10 border-blue-500/20",
+        emerald: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+        cyan: "text-cyan-500 bg-cyan-500/10 border-cyan-500/20",
+        purple: "text-purple-500 bg-purple-500/10 border-purple-500/20",
     };
 
-    const selectedColor = colors[color as keyof typeof colors] || colors.blue;
+    const style = colorStyles[color] || colorStyles.blue;
 
     return (
-        <div className={`
-            bg-slate-900/40 border rounded-xl p-4 transition-all duration-300
-            ${isUpdating ? `ring-2 ${selectedColor} border-transparent scale-[1.02] shadow-lg` : "border-slate-800/80"}
-        `}>
-            <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</span>
-                <Icon size={16} className={isUpdating ? selectedColor : "text-slate-600 transition-colors"} />
+        <div className={cnUtils("p-4 rounded-xl border flex flex-col justify-between transition-all hover:scale-[1.02]", style)}>
+            <div className="flex items-center gap-2 mb-2">
+                <Icon size={16} className="opacity-80" />
+                <span className="text-[10px] uppercase font-bold tracking-widest opacity-70">{label}</span>
             </div>
-            <div className="flex items-baseline gap-1">
-                <span className={`text-2xl font-bold font-mono transition-colors duration-300 ${isUpdating ? selectedColor : "text-white"}`}>
-                    {value}
-                </span>
-                <span className="text-sm font-medium text-slate-500">{unit}</span>
+
+            <div className="text-2xl font-black tracking-tight flex items-baseline">
+                {value ?? '--'}
+                <span className="text-sm font-medium opacity-60 ml-1">{unit}</span>
             </div>
-            {isUpdating && (
-                <div className={`mt-2 h-0.5 rounded-full bg-current ${selectedColor} animate-pulse w-full opacity-30`} />
-            )}
         </div>
     );
-};
-
-export default LiveTelemetryCard;
+}

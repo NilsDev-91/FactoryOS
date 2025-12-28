@@ -1,80 +1,76 @@
 @echo off
+SETLOCAL EnableExtensions EnableDelayedExpansion
 
-:: 1. The "Silver Bullet" Cleanup (SAFE MODE)
-echo [FactoryOS] Performing robust cleanup...
-:: NUR cmd.exe Prozesse töten, die "FactoryOS" im Titel haben. Editor bleibt offen.
-powershell -Command "Get-Process cmd | Where-Object {$_.MainWindowTitle -like 'FactoryOS*'} | Stop-Process -Force" >nul 2>&1
+REM ====================================================
+REM FACTORY OS - ONE CLICK STARTUP
+REM ====================================================
 
-:: 2. Timing & Self-Identification
-timeout /t 1 /nobreak >nul
-title FactoryOS Launcher
-cls
-
-echo.
-echo ===================================================
-echo --- CLEANUP COMPLETE: Ports 3000/8000 freed ---
-echo ===================================================
-echo.
-setlocal
-
-:: 3. Docker Check
-echo [FactoryOS] Checking Docker status...
+echo [PRE-FLIGHT] Checking Docker Status...
 docker info >nul 2>&1
-if %errorlevel% == 0 (
-    echo [FactoryOS] Docker Engine is already running.
-    goto :STARTUP
+if %errorlevel% neq 0 (
+    color 4F
+    echo.
+    echo ====================================================
+    echo [ERROR] DOCKER IS NOT RUNNING!
+    echo ====================================================
+    echo Please start Docker Desktop and try again.
+    echo.
+    pause
+    exit /b 1
 )
+echo [OK] Docker is running.
 
-:: 4. Auto-Start Logic
-echo [FactoryOS] Docker is not running.
-echo Starting Docker Desktop...
-if exist "C:\Program Files\Docker\Docker\Docker Desktop.exe" (
-    start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
-) else (
-    echo [ERROR] Docker Desktop executable not found at C:\Program Files\Docker\Docker\Docker Desktop.exe
-    echo [ERROR] Please start Docker manually.
+REM ====================================================
+REM 1. START DATABASE
+REM ====================================================
+echo.
+echo [1/3] Starting Database Infrastructure...
+docker-compose up -d
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to start Docker containers.
     pause
     exit /b 1
 )
 
-:: 5. Wait Loop
-echo [FactoryOS] Waiting for Docker Engine to start...
-:WAIT_LOOP
+echo Waiting 5 seconds for Database to warm up...
 timeout /t 5 /nobreak >nul
-docker info >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [FactoryOS] Waiting for Docker Engine...
-    goto :WAIT_LOOP
-)
 
-echo [FactoryOS] Docker Engine started successfully.
-
-:: 6. Launch Stack
-:STARTUP
-echo [FactoryOS] Cleaning up previous containers...
-docker-compose down --remove-orphans
-
-echo [FactoryOS] Starting Database Containers (with build)...
-docker-compose up --build -d
-
-echo [FactoryOS] Starting Backend API Server...
-start "FactoryOS API" cmd /k "python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
-
-echo [FactoryOS] Starting Worker Service...
-start "FactoryOS Worker" cmd /k "python worker_service.py"
-
-echo [FactoryOS] Starting Order Service...
-start "FactoryOS Orders" cmd /k "python order_service.py"
-
-echo [FactoryOS] Starting Frontend...
-start "FactoryOS Frontend" cmd /k "cd frontend && npm run dev"
-
+REM ====================================================
+REM 2. START BACKEND (New Window)
+REM ====================================================
 echo.
-echo ===================================================
-echo [FactoryOS] All systems go!
-echo [FactoryOS] Backend: http://localhost:8000
-echo [FactoryOS] Frontend: http://localhost:3000
-echo ===================================================
-echo.
+echo [2/3] Launching Backend API...
+REM Using python -m uvicorn because uvicorn.exe might not be in PATH
+start "FactoryOS Backend" cmd /k "python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
 
+REM ====================================================
+REM 3. START FRONTEND (New Window)
+REM ====================================================
+echo.
+echo [3/3] Launching Frontend Dashboard...
+cd frontend
+REM Check if node_modules exists, if not, warn or install (optional, keeping it simple as per req)
+start "FactoryOS Frontend" cmd /k "npm run dev"
+cd ..
+
+REM ====================================================
+REM SUCCESS SUMMARY
+REM ====================================================
+color 0A
+echo.
+echo ====================================================
+echo               FACTORY OS STARTED
+echo ====================================================
+echo.
+echo [INFRA]  Database:   Running (Docker)
+echo [API]    Backend:    http://127.0.0.1:8000 (Check "FactoryOS Backend" window)
+echo [UI]     Frontend:   http://localhost:3000 (Check "FactoryOS Frontend" window)
+echo.
+echo Keep this window open to maintain the session.
+echo Press any key to stop DB and exit...
+echo.
 pause
+
+REM Cleanup on exit
+echo Stopping Database...
+docker-compose down

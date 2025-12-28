@@ -23,6 +23,8 @@ class PrinterTypeEnum(str, Enum):
     P1S = "P1S"
     A1 = "A1"
     X1C = "X1C"
+    P1P = "P1P"
+    A1_MINI = "A1 Mini"
 
 class PrinterStatusEnum(str, Enum):
     IDLE = "IDLE"

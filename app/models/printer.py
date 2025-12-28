@@ -26,3 +26,10 @@ class PrinterRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+class PrinterCreate(BaseModel):
+    serial: str
+    name: str
+    ip_address: str
+    access_code: str
+    type: PrinterTypeEnum
